@@ -1,177 +1,217 @@
 <!DOCTYPE html>
 <html>
 <head>
-    <title>Peta Magelang</title>
+    <title>WEBGIS KESIAPSIAGAAN BENCANA GUNUNG MERAPI DI MAGELANG DAN SEKITARNYA</title>
     <meta charset="utf-8" />
+
+    <!-- Bootstrap CSS -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+
+
+    <!-- Leaflet -->
     <link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css" />
     <script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
 
     <style>
+        body {
+            margin: 0;
+            padding: 0;
+        }
+
+        /* ================= HEADER ================= */
+        .title {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            background: rgba(255, 255, 255, 0.95);
+            padding: 12px 0;
+            text-align: center;
+            font-size: 20px;
+            font-weight: bold;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            border-top: 2px solid #000;
+            border-bottom: 2px solid #000;
+            z-index: 1000;
+        }
+
+        /* ================= MAP ================= */
+        #map {
+            width: 100%;
+            height: calc(100vh - 70px);
+            margin-top: 70px;
+        }
+
+        /* ================= LEGEND ================= */
         .legend {
             background: white;
             padding: 10px;
             line-height: 20px;
             color: #333;
             border-radius: 6px;
-            box-shadow: 0 0 15px rgba(0,0,0,0.2);
+            box-shadow: 0 0 10px rgba(0,0,0,0.25);
             font-size: 14px;
-            max-height: 350px;
-            overflow-y: auto;
         }
+
         .legend i {
-            width: 18px;
-            height: 18px;
-            float: left;
+            display: inline-block;
             margin-right: 8px;
-            opacity: 0.85;
         }
-        .legend h4 {
-            margin: 0 0 10px 0;
-            font-size: 15px;
-            text-align: left;
+
+        .line {
+            width: 26px;
+            height: 4px;
         }
     </style>
 </head>
+
 <body>
 
-<div id="map" style="width:100%; height:650px;"></div>
+<div class="title container-fluid text-center">
+    WEBGIS KESIAPSIAGAAN BENCANA GUNUNG MERAPI DI MAGELANG DAN SEKITARNYA
+</div>
+
+<div id="map"></div>
 
 <script>
+
 // MAP
 var map = L.map("map").setView([-7.47, 110.21], 11);
 
-// ======================================================
-// BASEMAPS
-// ======================================================
 
-// OpenStreetMap
+// BASEMAP
+// 1. OpenStreetMap (Administrasi & Jalan)
 var osm = L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
     maxZoom: 19
 }).addTo(map);
 
-// Esri World Imagery (Satelit)
-var esri = L.tileLayer(
-    "https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}"
+// 2. Esri World Imagery (Analisis fisik, sungai, lereng)
+var esriImagery = L.tileLayer(
+    "https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}",
+    { maxZoom: 19 }
 );
 
-// Google Maps - Road ONLY
-var gRoad = L.tileLayer(
-    "http://{s}.google.com/vt/lyrs=m&x={x}&y={y}&z={z}",
-    { maxZoom: 20, subdomains: ['mt0','mt1','mt2','mt3'] }
+// 3. Esri Topographic (Relief & konteks gunung api)
+var esriTopo = L.tileLayer(
+    "https://server.arcgisonline.com/ArcGIS/rest/services/World_Topo_Map/MapServer/tile/{z}/{y}/{x}",
+    { maxZoom: 19 }
 );
 
-// ======================================================
-// WMS LAYERS
-// ======================================================
-
-// Kecamatan
+// WMS GEOSERVER
 var kecamatan = L.tileLayer.wms("http://localhost:8080/geoserver/pg_web/wms", {
     layers: "pg_web:Magelang_Kecamatan",
     format: "image/png",
     transparent: true
 }).addTo(map);
 
-// Jalan
 var jalan = L.tileLayer.wms("http://localhost:8080/geoserver/pg_web/wms", {
     layers: "pg_web:Magelang_Jalan",
     format: "image/png",
     transparent: true
 }).addTo(map);
 
-// Sungai
 var sungai = L.tileLayer.wms("http://localhost:8080/geoserver/pg_web/wms", {
     layers: "pg_web:Magelang_Sungai",
     format: "image/png",
     transparent: true
 }).addTo(map);
 
-// Titik Kecamatan
-var titik = L.tileLayer.wms("http://localhost:8080/geoserver/pg_web/wms", {
-    layers: "pg_web:data_kecamatan_magelang",
-    format: "image/png",
-    transparent: true
-});
 
-// ======================================================
-// CONTROL LAYERS
-// ======================================================
+// GUNUNG MERAPI
+var merapiCoord = [-7.5407, 110.4461];
+
+var merapi = L.marker(merapiCoord).bindPopup(
+    "<b>Gunung Merapi</b><br>" +
+    "Gunung api aktif tipe stratovolcano"
+);
+
+
+// ZONA RAWAN BENCANA (ZRB) + POPUP
+var zrb3 = L.circle(merapiCoord, {
+    radius: 5000,
+    color: "#ff0000",
+    fillColor: "#ff0000",
+    fillOpacity: 0.35
+}).bindPopup(
+    "<b>ZONA RAWAN BENCANA III (TINGGI)</b><hr>" +
+    "Radius: ± 5 km<br>" +
+    "Tingkat Bahaya: Tinggi<br>" +
+    "Potensi Bahaya:<ul>" +
+    "<li>Awan panas</li>" +
+    "<li>Lava pijar</li>" +
+    "<li>Guguran batu</li></ul>" +
+    "<b>Rekomendasi:</b> Tidak layak huni"
+);
+
+var zrb2 = L.circle(merapiCoord, {
+    radius: 10000,
+    color: "#ff9900",
+    fillColor: "#ff9900",
+    fillOpacity: 0.30
+}).bindPopup(
+    "<b>ZONA RAWAN BENCANA II (SEDANG)</b><hr>" +
+    "Radius: ± 10 km<br>" +
+    "Tingkat Bahaya: Sedang<br>" +
+    "Potensi Bahaya:<ul>" +
+    "<li>Lahar hujan</li>" +
+    "<li>Hujan abu lebat</li></ul>" +
+    "<b>Rekomendasi:</b> Waspada & siap evakuasi"
+);
+
+var zrb1 = L.circle(merapiCoord, {
+    radius: 15000,
+    color: "#ffff00",
+    fillColor: "#ffff00",
+    fillOpacity: 0.25
+}).bindPopup(
+    "<b>ZONA RAWAN BENCANA I (RENDAH)</b><hr>" +
+    "Radius: ± 15 km<br>" +
+    "Tingkat Bahaya: Rendah<br>" +
+    "Potensi Bahaya:<ul>" +
+    "<li>Hujan abu vulkanik</li></ul>" +
+    "<b>Rekomendasi:</b> Tetap waspada"
+);
+
+// LAYER CONTROL
 L.control.layers(
     {
         "OpenStreetMap": osm,
-        "Esri World Imagery (Satelit)": esri,
-        "Google Maps - Road": gRoad
+        "Esri World Imagery": esriImagery,
+        "Esri Topographic": esriTopo
     },
     {
         "Kecamatan": kecamatan,
-        "Jalan": jalan,
+        "Jaringan Jalan": jalan,
         "Sungai": sungai,
-        "Titik Kecamatan": titik
+        "Gunung Merapi": merapi,
+        "ZRB III (Tinggi)": zrb3,
+        "ZRB II (Sedang)": zrb2,
+        "ZRB I (Rendah)": zrb1
     }
 ).addTo(map);
 
-// ======================================================
-// LEGEND FINAL
-// ======================================================
+// LEGEND
 var legend = L.control({ position: "bottomleft" });
 
-legend.onAdd = function (map) {
+legend.onAdd = function () {
     var div = L.DomUtil.create("div", "legend");
-    div.innerHTML += "<h4>Legenda</h4>";
 
-    // Kecamatan colors
-    var kecItems = [
-        {color:"#37A6D7", name:"Bandongan"},
-        {color:"#5E33BF", name:"Borobudur"},
-        {color:"#17D84F", name:"Candimulyo"},
-        {color:"#9FEA73", name:"Dukun"},
-        {color:"#C76C6A", name:"Grabag"},
-        {color:"#B0663D", name:"Kajoran"},
-        {color:"#46F7E1", name:"Kaliangkrik"},
-        {color:"#1E2CBF", name:"Mertoyudan"},
-        {color:"#6AC523", name:"Mungkid"},
-        {color:"#8BE2C2", name:"Muntilan"},
-        {color:"#9BA83C", name:"Ngablak"},
-        {color:"#9B0FAF", name:"Ngluwar"},
-        {color:"#213DBF", name:"Pakis"},
-        {color:"#0600B4", name:"Salam"},
-        {color:"#CC4F76", name:"Salaman"},
-        {color:"#F51AD1", name:"Sawangan"},
-        {color:"#DF8B7A", name:"Secang"},
-        {color:"#8AE537", name:"Srumbung"},
-        {color:"#C9A24E", name:"Tegalrejo"},
-        {color:"#C79F0A", name:"Tempuran"},
-        {color:"#D819CB", name:"Windusari"}
-    ];
-
-    div.innerHTML += "<b>Kecamatan:</b><br>";
-    kecItems.forEach(function(item){
-        div.innerHTML +=
-            '<i style="background:' + item.color + ';"></i> ' +
-            item.name + "<br>";
-    });
-
-    // Jalan
-    div.innerHTML += "<br>";
-    div.innerHTML +=
-        '<i style="background:#f7e72b; width:25px; height:4px; margin-top:8px;"></i> ' +
-        'Magelang_Jalan<br>';
-
-    // Sungai
-    div.innerHTML +=
-        '<i style="background:#4c4fb9; width:25px; height:4px; margin-top:8px;"></i> ' +
-        'Magelang_Sungai<br>';
-
-    // Titik Kecamatan
-    div.innerHTML +=
-        '<i style="background:#ff0000; width:10px; height:10px; margin-top:4px;"></i> ' +
-        'Titik Kecamatan<br>';
+    div.innerHTML += "<b>LEGENDA</b><br><br>";
+    div.innerHTML += "<b>Zona Rawan Bencana</b><br>";
+    div.innerHTML += '<i class="line" style="background:#ff0000"></i> ZRB III (Tinggi)<br>';
+    div.innerHTML += '<i class="line" style="background:#ff9900"></i> ZRB II (Sedang)<br>';
+    div.innerHTML += '<i class="line" style="background:#ffff00"></i> ZRB I (Rendah)<br><br>';
+    div.innerHTML += '<img src="https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon.png" width="12"> Gunung Merapi';
 
     return div;
 };
 
 legend.addTo(map);
-
 </script>
+
+<!-- Bootstrap JS -->
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
 
 </body>
 </html>
